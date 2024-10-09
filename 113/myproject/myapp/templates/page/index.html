@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="zh-Hant">
 
@@ -5,12 +6,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台灣資料視覺化</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="map.js" defer></script>
+    <script src="{% static 'map.js' %}" defer></script>
+    <script type="text/javascript">
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    
+        const csrftoken = getCookie('csrftoken');
+    </script>
 </head>
 
 <body>
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
     <div id="map-title">
         <h1>台灣各縣市地圖</h1>
     </div>
@@ -101,9 +122,8 @@
             <button id="pause-button" onclick="pauseSlider()" disabled>暫停</button>
             <button id="speed-button" onclick="changeSpeed()">速度</button>
             <label id="speed-label" for="valueSlider"> x1 </label>
-            <button id="predict-button" onclick="handlePrediction()" style="display: none;">預測</button>
+            <button id="predict-button" onclick="handlePrediction()">預測</button>
         </div>
-
         <div id="hover-effect" class="hover-effect" style="display: none;"></div>
     </div>
     <div id="upload-container">

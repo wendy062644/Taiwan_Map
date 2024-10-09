@@ -1,6 +1,6 @@
 let mapDataColumns = [];  // 保存多個數據列
 let currentSpeedIndex = 0;  // 當前顯示的數據列
-const speedValues = [1, 1.25, 1.5, 1.75, 2.0];
+const speedValues = [1, 1.25, 1.5, 1.75, 2.0, 0.5, 0.75];
 let sliderInterval = null;
 
 function initializeMapData() {
@@ -116,9 +116,9 @@ function handleFileUpload() {
 
         // 檢查資料量，決定是否顯示預測按鈕
         if (mapDataColumns.length > 15) {
-            document.getElementById('predict-button').style.display = 'block';
+            document.getElementById('predict-button').style.visibility = 'visible';
         } else {
-            document.getElementById('predict-button').style.display = 'none';
+            document.getElementById('predict-button').style.visibility = 'hidden';
         }
 
         // 更新地圖顯示第一個數據列
@@ -130,7 +130,10 @@ function handleFileUpload() {
 
 function handlePrediction() {
     // 獲取當前顯示的數據列
-    const data = mapDataColumns[currentColumnIndex].map(entry => entry.Value).join(',');
+    const data = mapDataColumns.map(column =>
+        column.map(entry => entry.Value).join(',')
+    ).join(',');
+
 
     // 發送 POST 請求到 Django 後端進行預測
     fetch('/predict/', {
@@ -141,13 +144,51 @@ function handlePrediction() {
         },
         body: `data=${data}`
     })
-    .then(response => response.json())
-    .then(result => {
-        console.log('Predicted values:', result.predictions);
-        // 你可以在這裡更新前端顯示預測結果
-    })
-    .catch(error => {
-        console.error('Error:', error);
+        .then(response => response.json())
+        .then(result => {
+
+            for (let i = 0; i < result.predictions[0].length; i++) {
+                const predictedData = mapDataColumns[currentColumnIndex].map((entry, index) => ({
+                    County: entry.County,
+                    Value: result.predictions[index][i] || 0, // 第 index 組的第 i 個預測值
+                    Title: `預測 - 第${mapDataColumns.length + 1}列`
+                }));
+                // 將每次預測的結果推入到 mapDataColumns
+                mapDataColumns.push(predictedData);
+            }
+
+            // 更新滑軌的狀態
+            const sliderInfoContainer = document.getElementById('slider-info-container');
+            const valueSlider = document.getElementById('valueSlider');
+            const sliderInfoText = document.getElementById('slider-info-text');
+            const columnTitle = document.getElementById('column-title');
+
+            sliderInfoContainer.style.display = 'block';  // 顯示滑軌容器
+            valueSlider.max = mapDataColumns.length - 1;  // 更新滑軌最大值
+            valueSlider.value = mapDataColumns.length - 1;  // 切換到最新的預測列
+            valueSlider.disabled = false;  // 啟用滑軌
+
+            // 顯示滑軌數量信息和標題
+            sliderInfoText.textContent = `(1/${mapDataColumns.length})`;
+            columnTitle.textContent = mapDataColumns[0][0]?.Title || '';
+
+            // 更新地圖顯示預測的數據列（可以自定義是否立即顯示預測列或保持當前顯示列）
+            currentColumnIndex = mapDataColumns.length - 1;  // 切換到最新的預測列
+            updateMap(mapDataColumns[currentColumnIndex]);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function displayPredictionResult(predictions) {
+    const predictionContainer = document.getElementById('prediction-result');
+    predictionContainer.innerHTML = '<h3>預測結果</h3>';
+
+    predictions.forEach((value, index) => {
+        const predictionItem = document.createElement('p');
+        predictionItem.textContent = `預測 ${index + 1}: ${value.toFixed(2)}`;
+        predictionContainer.appendChild(predictionItem);
     });
 }
 
@@ -206,11 +247,11 @@ function getInterpolatedColor(scheme, value, minValue, maxValue) { // 顏色漸�
     const lowerIndex = Math.floor(index);
     const upperIndex = Math.ceil(index);
     if (lowerIndex === upperIndex) return scheme[lowerIndex];
-    
+
     const ratio = index - lowerIndex;
     const lowerColor = hexToRgb(scheme[lowerIndex]);
     const upperColor = hexToRgb(scheme[upperIndex]);
-    
+
     const interpolatedColor = {
         r: Math.round(lowerColor.r + ratio * (upperColor.r - lowerColor.r)),
         g: Math.round(lowerColor.g + ratio * (upperColor.g - lowerColor.g)),
@@ -254,10 +295,11 @@ function playSlider() {
     pauseButton.disabled = false;
 
     sliderInterval = setInterval(() => {
-        if (valueSlider.value < valueSlider.max) {
-            valueSlider.value = parseInt(valueSlider.value) + 1;
+        if (valueSlider.value == valueSlider.max) {
+            valueSlider.value = 0;
+            
         } else {
-            valueSlider.value = 0; // 當滑軌到達末端時，自動重回開頭
+            valueSlider.value = parseInt(valueSlider.value) + 1; // 當滑軌到達末端時，自動重回開頭
         }
         handleSliderChange(); // 更新滑軌值
     }, 1000 / speedValues[currentSpeedIndex]); // 根據當前速度設置間隔時間
@@ -429,7 +471,7 @@ document.getElementById('valueSlider').addEventListener('mousedown', function (e
 
 function throttle(func, limit) { //防止密集判斷
     let inThrottle;
-    return function() {
+    return function () {
         const args = arguments;
         const context = this;
         if (!inThrottle) {
@@ -439,6 +481,15 @@ function throttle(func, limit) { //防止密集判斷
         }
     }
 }
+
+fetch('/predict/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: `data=${data}`
+})
 
 const throttledSliderChange = throttle(handleSliderChange, 20);
 document.getElementById('valueSlider').oninput = throttledSliderChange;
