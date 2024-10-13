@@ -78,7 +78,6 @@ def tokenize_code(code):
 def lcs_tokens(tokens1, tokens2):
     tokens1_str = [token[0] for token in tokens1]
     tokens2_str = [token[0] for token in tokens2]
-
     matcher = SequenceMatcher(None, tokens1_str, tokens2_str)
     highlighted_code1 = ""
     highlighted_code2 = ""
@@ -89,9 +88,9 @@ def lcs_tokens(tokens1, tokens2):
         # 處理左側代碼的標記
         for token, (line, col) in tokens1[i1:i2]:
             if not token.strip():
-                highlighted_code1 += token  # 直接保留空白符，避免包裹在 <span> 中
+                highlighted_code1 += token.replace("<", "&lt;").replace(">", "&gt;")  # 直接保留空白符，避免包裹在 <span> 中
                 continue
-
+            
             if line > current_line1:
                 highlighted_code1 += "\n"
                 current_col1 = 0
@@ -103,18 +102,19 @@ def lcs_tokens(tokens1, tokens2):
 
             # 將重複部分標記為綠色，其他部分保留原始樣式
             if tag == 'equal':
-                highlighted_code1 += f'<span class="highlight">{token}</span>'
+                highlighted_code1 += f'<span class="highlight">{token.replace("<", "&lt;").replace(">", "&gt;")}</span>'
             else:
-                highlighted_code1 += token
+                # 對非匹配部分進行 HTML 編碼
+                highlighted_code1 += token.replace("<", "&lt;").replace(">", "&gt;")
 
             current_col1 += len(token)
 
         # 處理右側代碼的標記
         for token, (line, col) in tokens2[j1:j2]:
             if not token.strip():
-                highlighted_code2 += token  # 直接保留空白符，避免包裹在 <span> 中
+                highlighted_code2 += token.replace("<", "&lt;").replace(">", "&gt;")  # 直接保留空白符，避免包裹在 <span> 中
                 continue
-
+            
             if line > current_line2:
                 highlighted_code2 += "\n"
                 current_col2 = 0
@@ -126,9 +126,10 @@ def lcs_tokens(tokens1, tokens2):
 
             # 將重複部分標記為透明，非重複部分標記為紅色
             if tag == 'equal':
-                highlighted_code2 += f'<span class="transparent">{token}</span>'
+                highlighted_code2 += f'<span class="transparent">{token.replace("<", "&lt;").replace(">", "&gt;")}</span>'
             else:
-                highlighted_code2 += f'<span class="non-matching">{token}</span>'
+                # 對非匹配部分進行 HTML 編碼
+                highlighted_code2 += f'<span class="non-matching">{token.replace("<", "&lt;").replace(">", "&gt;")}</span>'
 
             current_col2 += len(token)
 
@@ -136,6 +137,7 @@ def lcs_tokens(tokens1, tokens2):
     highlighted_code2 = highlighted_code2.strip()
 
     return highlighted_code1, highlighted_code2
+
 
 
 def compare_code(request):
