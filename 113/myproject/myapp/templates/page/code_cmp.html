@@ -109,12 +109,70 @@
         .transparent {
             background-color: transparent;
         }
+            .file-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .file-input {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .upload-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .upload-button:hover {
+            background-color: #0056b3;
+        }
+            .textarea-container {
+            margin-bottom: 20px;
+        }
+
+        .file-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .file-input {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .upload-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .upload-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Code Comparison</h1>
+        <h1>Code Comparison System</h1>
         <form method="POST">
             {% csrf_token %}
             <div class="flex">
@@ -122,16 +180,22 @@
                     <label for="code_input1">Comparison Code (比較者):</label><br>
                     <textarea id="code_input1" name="code_input1">{{ code_input1 }}</textarea><br><br>
 
-                    <label for="file_input1">Upload Code File 1:</label><br>
-                    <input type="file" id="file_input1"><br><br>
+                    <label for="file_input1">選擇檔案:</label><br>
+                    <div class="file-upload-container">
+                        <input type="file" id="file_input1" class="file-input">
+                        <button type="button" id="upload_file1" class="upload-button">Upload</button>
+                    </div><br><br>
                 </div>
 
                 <div class="textarea-container">
                     <label for="code_input2">Compared Code (被比較者):</label><br>
                     <textarea id="code_input2" name="code_input2">{{ code_input2 }}</textarea><br><br>
 
-                    <label for="file_input2">Upload Code File 2:</label><br>
-                    <input type="file" id="file_input2"><br><br>
+                    <label for="file_input2">選擇檔案:</label><br>
+                    <div class="file-upload-container">
+                        <input type="file" id="file_input2" class="file-input">
+                        <button type="button" id="upload_file2" class="upload-button">Upload</button>
+                    </div><br><br>
                 </div>
             </div>
 
@@ -152,30 +216,6 @@
     </div>
 
     <script>
-        // 讀取檔案並將其內容放入文本框1
-        document.getElementById('file_input1').addEventListener('change', function (event) {
-            let file = event.target.files[0];
-            if (file) {
-                let reader = new FileReader();
-                reader.onload = function (e) {
-                    document.getElementById('code_input1').value = e.target.result;
-                };
-                reader.readAsText(file);
-            }
-        });
-
-        // 讀取檔案並將其內容放入文本框2
-        document.getElementById('file_input2').addEventListener('change', function (event) {
-            let file = event.target.files[0];
-            if (file) {
-                let reader = new FileReader();
-                reader.onload = function (e) {
-                    document.getElementById('code_input2').value = e.target.result;
-                };
-                reader.readAsText(file);
-            }
-        });
-
         document.getElementById('code_input1').addEventListener('keydown', function (e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -183,9 +223,9 @@
                 let end = e.target.selectionEnd;
 
                 // Calculate the number of spaces to add to align to the nearest multiple of 4
-                let currentLineStart = e.target.value.lastIndexOf('\n', start - 1) + 1; // 修正查找行的開始
+                let currentLineStart = e.target.value.lastIndexOf('', start - 1) + 1;
                 let currentIndentation = start - currentLineStart;
-                let spacesToAdd = 4 - (currentIndentation % 4); // 計算需要添加的空格數
+                let spacesToAdd = (4 - (currentIndentation % 4)) % 4;
 
                 // set textarea value to: text before caret + spaces + text after caret
                 e.target.value = e.target.value.substring(0, start) + ' '.repeat(spacesToAdd) + e.target.value.substring(end);
@@ -201,14 +241,42 @@
                 let start = e.target.selectionStart;
                 let end = e.target.selectionEnd;
 
-                // set textarea value to: text before caret + tab + text after caret
-                e.target.value = e.target.value.substring(0, start) + '    ' + e.target.value.substring(end);
+                // Calculate the number of spaces to add to align to the nearest multiple of 4
+                let currentLineStart = e.target.value.lastIndexOf('', start - 1) + 1;
+                let currentIndentation = start - currentLineStart;
+                let spacesToAdd = (4 - (currentIndentation % 4)) % 4;
+
+                // set textarea value to: text before caret + spaces + text after caret
+                e.target.value = e.target.value.substring(0, start) + ' '.repeat(spacesToAdd) + e.target.value.substring(end);
 
                 // put caret at right position again
-                e.target.selectionStart = e.target.selectionEnd = start + 4;
+                e.target.selectionStart = e.target.selectionEnd = start + spacesToAdd;
             }
         });
 
+    document.getElementById('upload_file1').addEventListener('click', function () {
+            let file = document.getElementById('file_input1').files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('code_input1').value = e.target.result;
+                    document.getElementById('file_input1').value = '';
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('upload_file2').addEventListener('click', function () {
+            let file = document.getElementById('file_input2').files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('code_input2').value = e.target.result;
+                    document.getElementById('file_input2').value = '';
+                };
+                reader.readAsText(file);
+            }
+        });
     </script>
 </body>
 
