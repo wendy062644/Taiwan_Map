@@ -4,12 +4,12 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from difflib import SequenceMatcher
+import tokenize
+from io import BytesIO
 
 def home(request):
-    context = {
-        'message': "Hello, world! Welcome to my first Django app."
-    }
-    return render(request, 'page/index.html', context)
+    return render(request, 'page/index.html')
 
 # @csrf_exempt
 def predict_future_data(request): 
@@ -63,3 +63,100 @@ def predict_future_data(request):
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=400)
 
+def tokenize_code(code):
+    tokens = []
+    try:
+        tokens_gen = tokenize.tokenize(BytesIO(code.encode('utf-8')).readline)
+        for token in tokens_gen:
+            if token.type in [tokenize.ENCODING, tokenize.NL, tokenize.NEWLINE]:
+                continue
+            tokens.append((token.string, token.start))
+    except tokenize.TokenError:
+        pass
+    return tokens
+
+def lcs_tokens(tokens1, tokens2):
+    tokens1_str = [token[0] for token in tokens1]
+    tokens2_str = [token[0] for token in tokens2]
+
+    matcher = SequenceMatcher(None, tokens1_str, tokens2_str)
+    highlighted_code1 = ""
+    highlighted_code2 = ""
+    current_line1, current_col1 = 0, 0
+    current_line2, current_col2 = 0, 0
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        # 處理左側代碼的標記
+        for token, (line, col) in tokens1[i1:i2]:
+            if not token.strip():
+                highlighted_code1 += token  # 直接保留空白符，避免包裹在 <span> 中
+                continue
+
+            if line > current_line1:
+                highlighted_code1 += "\n"
+                current_col1 = 0
+                current_line1 = line
+
+            if col > current_col1:
+                highlighted_code1 += " " * (col - current_col1)
+                current_col1 = col
+
+            # 將重複部分標記為綠色，其他部分保留原始樣式
+            if tag == 'equal':
+                highlighted_code1 += f'<span class="highlight">{token}</span>'
+            else:
+                highlighted_code1 += token
+
+            current_col1 += len(token)
+
+        # 處理右側代碼的標記
+        for token, (line, col) in tokens2[j1:j2]:
+            if not token.strip():
+                highlighted_code2 += token  # 直接保留空白符，避免包裹在 <span> 中
+                continue
+
+            if line > current_line2:
+                highlighted_code2 += "\n"
+                current_col2 = 0
+                current_line2 = line
+
+            if col > current_col2:
+                highlighted_code2 += " " * (col - current_col2)
+                current_col2 = col
+
+            # 將重複部分標記為透明，非重複部分標記為紅色
+            if tag == 'equal':
+                highlighted_code2 += f'<span class="transparent">{token}</span>'
+            else:
+                highlighted_code2 += f'<span class="non-matching">{token}</span>'
+
+            current_col2 += len(token)
+
+    highlighted_code1 = highlighted_code1.strip()
+    highlighted_code2 = highlighted_code2.strip()
+
+    return highlighted_code1, highlighted_code2
+
+
+def compare_code(request):
+    code_input1 = ""
+    code_input2 = ""
+    result_left = ""
+    result_right = ""
+
+    if request.method == 'POST':
+        code_input1 = request.POST.get('code_input1', '')
+        code_input2 = request.POST.get('code_input2', '')
+
+        tokens1 = tokenize_code(code_input1)
+        tokens2 = tokenize_code(code_input2)
+
+        # Compare tokens using LCS algorithm
+        result_left, result_right = lcs_tokens(tokens1, tokens2)
+
+    return render(request, 'page/code_cmp.html', {
+        'code_input1': code_input1,
+        'code_input2': code_input2,
+        'result_left': result_left,
+        'result_right': result_right
+    })

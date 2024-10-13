@@ -1,6 +1,6 @@
 let mapDataColumns = [];  // 保存多個數據列
 let currentSpeedIndex = 0;  // 當前顯示的數據列
-const speedValues = [1, 1.25, 1.5, 1.75, 2.0, 0.5, 0.75];
+const speedValues = [1, 1.5, 2.0, 3.0, 0.5];
 let sliderInterval = null;
 
 function initializeMapData() {

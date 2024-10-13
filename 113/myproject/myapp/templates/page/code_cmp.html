@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Comparison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .flex {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .textarea-container {
+            width: 48%;
+        }
+
+        textarea {
+            width: 95%;
+            height: 300px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8vw;
+            border-radius: 2px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            resize: none;
+        }
+
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .result-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .result {
+            width: 90%;
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background-color: lightgreen;
+            padding: 1px;
+            border-radius: 1px;
+        }
+
+        .non-matching {
+            background-color: lightcoral;
+            padding: 1px;
+            border-radius: 1px;
+        }
+
+        .transparent {
+            background-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Code Comparison</h1>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="flex">
+                <div class="textarea-container">
+                    <label for="code_input1">Comparison Code (比較者):</label><br>
+                    <textarea id="code_input1" name="code_input1">{{ code_input1 }}</textarea><br><br>
+
+                    <label for="file_input1">Upload Code File 1:</label><br>
+                    <input type="file" id="file_input1"><br><br>
+                </div>
+
+                <div class="textarea-container">
+                    <label for="code_input2">Compared Code (被比較者):</label><br>
+                    <textarea id="code_input2" name="code_input2">{{ code_input2 }}</textarea><br><br>
+
+                    <label for="file_input2">Upload Code File 2:</label><br>
+                    <input type="file" id="file_input2"><br><br>
+                </div>
+            </div>
+
+            <button type="submit">Compare</button>
+        </form>
+
+        <h2>Comparison Result:</h2>
+        <div class="result-container">
+            <div class="result-box">
+                <h3>Code 1</h3>
+                <div class="result" id="result_left">{{ result_left|safe }}</div>
+            </div>
+            <div class="result-box">
+                <h3>Code 2</h3>
+                <div class="result" id="result_right">{{ result_right|safe }}</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 讀取檔案並將其內容放入文本框1
+        document.getElementById('file_input1').addEventListener('change', function (event) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('code_input1').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // 讀取檔案並將其內容放入文本框2
+        document.getElementById('file_input2').addEventListener('change', function (event) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('code_input2').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('code_input1').addEventListener('keydown', function (e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                let start = e.target.selectionStart;
+                let end = e.target.selectionEnd;
+
+                // Calculate the number of spaces to add to align to the nearest multiple of 4
+                let currentLineStart = e.target.value.lastIndexOf('\n', start - 1) + 1; // 修正查找行的開始
+                let currentIndentation = start - currentLineStart;
+                let spacesToAdd = 4 - (currentIndentation % 4); // 計算需要添加的空格數
+
+                // set textarea value to: text before caret + spaces + text after caret
+                e.target.value = e.target.value.substring(0, start) + ' '.repeat(spacesToAdd) + e.target.value.substring(end);
+
+                // put caret at right position again
+                e.target.selectionStart = e.target.selectionEnd = start + spacesToAdd;
+            }
+        });
+
+        document.getElementById('code_input2').addEventListener('keydown', function (e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                let start = e.target.selectionStart;
+                let end = e.target.selectionEnd;
+
+                // set textarea value to: text before caret + tab + text after caret
+                e.target.value = e.target.value.substring(0, start) + '    ' + e.target.value.substring(end);
+
+                // put caret at right position again
+                e.target.selectionStart = e.target.selectionEnd = start + 4;
+            }
+        });
+
+    </script>
+</body>
+
+</html>
